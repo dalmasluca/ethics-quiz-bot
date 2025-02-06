@@ -299,7 +299,10 @@ async def button_callback(update: Update, context):
     await query.answer()
 
     if query.data.startswith('ans_'):
-        selected_answer = f"Risposta{query.data[4]}"
+        selected_idx = query.data[4]  # Ottiene l'indice selezionato (0,1,2,3)
+        # Usa la mappatura per ottenere l'indice originale
+        original_idx = context.bot_data['answer_mapping'][selected_idx]
+        selected_answer = f"Risposta{original_idx}"
         correct_answer = context.bot_data.get('correct_answer')
         current_question = context.bot_data.get('current_question')
 
@@ -316,7 +319,6 @@ async def button_callback(update: Update, context):
                 result_message += f"\n\nSpiegazione:\n{explanation}"
 
         await query.message.reply_text(result_message)
-
 
 def main():
     # Inizializza Gemini se l'API key è disponibile
