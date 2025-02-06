@@ -141,24 +141,37 @@ def get_keyboard():
     ]
     return InlineKeyboardMarkup(keyboard)
 
-async def get_ai_explanation(question, correct_answer):
+async def get_ai_explanation(question, correct_answer, answer_mapping):
     try:
         model = genai.GenerativeModel('gemini-pro')
 
-        # Ottieni il contenuto del PDF se disponibile
+        # Crea la lista delle risposte nell'ordine mostrato all'utente
+        shuffled_answers = []
+        for i in range(4):
+            original_idx = answer_mapping[str(i)]
+            shuffled_answers.append((chr(65+i), question[f'Risposta{original_idx}']))
+
         additional_context = get_pdf_content()
 
+        # Costruisci il prompt con le risposte nell'ordine mostrato
         base_prompt = f"""
         Riguardo questa domanda di etica: "{question['Domanda']}"
 
-        Le possibili risposte erano:
-        A) {question['Risposta0']}
-        B) {question['Risposta1']}
-        C) {question['Risposta2']}
-        D) {question['Risposta3']}
-
-        La risposta corretta è: {question[correct_answer]}
+        Le possibili risposte erano mostrate in questo ordine:
         """
+
+        # Aggiungi le risposte nell'ordine in cui sono state mostrate
+        for letter, answer in shuffled_answers:
+            base_prompt += f"\n{letter}) {answer}"
+
+        # Aggiungi la risposta corretta
+        correct_letter = None
+        for letter, (_, answer_text) in zip(['A', 'B', 'C', 'D'], shuffled_answers):
+            if answer_text == question[correct_answer]:
+                correct_letter = letter
+                break
+
+        base_prompt += f"\n\nLa risposta corretta è: {correct_letter}) {question[correct_answer]}"
 
         if additional_context:
             prompt = f"""
@@ -179,7 +192,6 @@ async def get_ai_explanation(question, correct_answer):
     except Exception as e:
         print(f"Errore nell'ottenere la spiegazione AI: {e}")
         return None
-
 async def send_question_to_user(context, chat_id):
     question = get_random_question()
 
@@ -314,7 +326,11 @@ async def button_callback(update: Update, context):
 
         # Se AI_API è configurato, ottieni e aggiungi la spiegazione
         if AI_API and current_question:
-            explanation = await get_ai_explanation(current_question, correct_answer)
+            explanation = await get_ai_explanation(
+                current_question,
+                correct_answer,
+                context.bot_data['answer_mapping']  # Passa la mappatura delle risposte
+            )
             if explanation:
                 result_message += f"\n\nSpiegazione:\n{explanation}"
 
