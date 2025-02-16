@@ -234,7 +234,7 @@ async def start(update, context):
 
     welcome_message = (
         f'{"Benvenuto" if is_new else "Bentornato"} {user.first_name}!\n'
-        "Riceverai domande sull'etica ogni 15 minuti.\n"
+        "Riceverai domande sull'etica ogni ora.\n"
         "Usa /domanda per ricevere una nuova domanda.\n"
         "Usa /stop_domande per disattivare l'invio automatico delle domande."
     )
@@ -361,7 +361,7 @@ def main():
     # Crea un array di orari per ogni 15 minuti tra le 9 e le 18
     times = []
     for hour in range(9, 22):
-        for minute in [0, 15, 30, 45]:
+        for minute in [0]:
             times.append(time(hour, minute))
 
     # Programma i messaggi per ogni orario specificato
