@@ -414,7 +414,12 @@ async def button_callback(update: Update, context):
         
         # Modifica il messaggio originale invece di inviarne uno nuovo
         # Rimuove anche la tastiera
-        await query.edit_message_text(text=f"{query.message.text}\n\nLa tua risposta: {chr(65+int(selected_idx_str))}\n{result_message}", reply_markup=None)def main():
+        await query.edit_message_text(text=f"{query.message.text}\n\nLa tua risposta: {chr(65+int(selected_idx_str))}\n{result_message}", reply_markup=None)
+
+
+
+
+def main():
     # Inizializza Gemini se l'API key è disponibile
     has_ai = setup_gemini()
     if has_ai:
