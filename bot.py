@@ -91,58 +91,8 @@ def update_user_stats(user_id, is_correct):
 
     save_stats(stats)
 
-async def get_ai_explanation(question, correct_answer_key, answer_mapping): # correct_answer_key è tipo "Risposta1"
-    try:
-        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
 
-        shuffled_answers_display = [] # Lista di tuple (lettera, testo_risposta)
-        # Ricostruisci l'ordine delle risposte come visualizzato dall'utente
-        # answer_mapping mappa '0' (indice UI) -> '2' (indice originale della risposta)
-        for ui_idx_str in sorted(answer_mapping.keys(), key=int): # '0', '1', '2', '3'
-            original_idx_str = answer_mapping[ui_idx_str] # es. '2'
-            letter = chr(65 + int(ui_idx_str)) # A, B, C, D
-            answer_text = question[f'Risposta{original_idx_str}']
-            shuffled_answers_display.append((letter, answer_text))
 
-        additional_context = get_pdf_content()
-
-        base_prompt = f"""
-        Riguardo questa domanda di etica: "{question['Domanda']}"
-
-        Le possibili risposte erano mostrate in questo ordine:
-        """
-        for letter, text in shuffled_answers_display:
-            base_prompt += f"\n{letter}) {text}"
-
-        # Trova la lettera della risposta corretta
-        correct_letter_display = ""
-        correct_answer_text = question[correct_answer_key] # Testo della risposta corretta
-        for letter, text in shuffled_answers_display:
-            if text == correct_answer_text:
-                correct_letter_display = letter
-                break
-        
-        base_prompt += f"\n\nLa risposta corretta è: {correct_letter_display}) {correct_answer_text}"
-
-        if additional_context:
-            prompt = f"""
-            Utilizzando il seguente contesto aggiuntivo:
-
-            {additional_context}
-
-            {base_prompt}
-
-            Puoi fornire una spiegazione chiara e concisa (max 150 parole) del perché questa è la risposta corretta,
-            facendo riferimento alle informazioni del contesto dove pertinente?
-            """
-        else:
-            prompt = base_prompt + "\n\nPuoi fornire una spiegazione chiara e concisa (max 150 parole) del perché questa è la risposta corretta?"
-
-        response = model.generate_content(prompt)
-        return response.text
-    except Exception as e:
-        print(f"Errore nell'ottenere la spiegazione AI: {e}")
-        return None
 # Funzione per inviare le statistiche giornaliere
 async def send_daily_stats(context):
     stats = load_stats()
@@ -208,7 +158,7 @@ def get_keyboard():
 
 async def get_ai_explanation(question, correct_answer, answer_mapping):
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
 
         # Crea la lista delle risposte nell'ordine mostrato all'utente
         shuffled_answers = []
