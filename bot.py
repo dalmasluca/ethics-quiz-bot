@@ -78,6 +78,58 @@ def update_user_stats(user_id, is_correct):
 
     save_stats(stats)
 
+async def get_ai_explanation(question, correct_answer_key, answer_mapping): # correct_answer_key è tipo "Risposta1"
+    try:
+        model = genai.GenerativeModel('gemini-pro')
+
+        shuffled_answers_display = [] # Lista di tuple (lettera, testo_risposta)
+        # Ricostruisci l'ordine delle risposte come visualizzato dall'utente
+        # answer_mapping mappa '0' (indice UI) -> '2' (indice originale della risposta)
+        for ui_idx_str in sorted(answer_mapping.keys(), key=int): # '0', '1', '2', '3'
+            original_idx_str = answer_mapping[ui_idx_str] # es. '2'
+            letter = chr(65 + int(ui_idx_str)) # A, B, C, D
+            answer_text = question[f'Risposta{original_idx_str}']
+            shuffled_answers_display.append((letter, answer_text))
+
+        additional_context = get_pdf_content()
+
+        base_prompt = f"""
+        Riguardo questa domanda di etica: "{question['Domanda']}"
+
+        Le possibili risposte erano mostrate in questo ordine:
+        """
+        for letter, text in shuffled_answers_display:
+            base_prompt += f"\n{letter}) {text}"
+
+        # Trova la lettera della risposta corretta
+        correct_letter_display = ""
+        correct_answer_text = question[correct_answer_key] # Testo della risposta corretta
+        for letter, text in shuffled_answers_display:
+            if text == correct_answer_text:
+                correct_letter_display = letter
+                break
+        
+        base_prompt += f"\n\nLa risposta corretta è: {correct_letter_display}) {correct_answer_text}"
+
+        if additional_context:
+            prompt = f"""
+            Utilizzando il seguente contesto aggiuntivo:
+
+            {additional_context}
+
+            {base_prompt}
+
+            Puoi fornire una spiegazione chiara e concisa (max 150 parole) del perché questa è la risposta corretta,
+            facendo riferimento alle informazioni del contesto dove pertinente?
+            """
+        else:
+            prompt = base_prompt + "\n\nPuoi fornire una spiegazione chiara e concisa (max 150 parole) del perché questa è la risposta corretta?"
+
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        print(f"Errore nell'ottenere la spiegazione AI: {e}")
+        return None
 # Funzione per inviare le statistiche giornaliere
 async def send_daily_stats(context):
     stats = load_stats()
@@ -192,6 +244,9 @@ async def get_ai_explanation(question, correct_answer, answer_mapping):
     except Exception as e:
         print(f"Errore nell'ottenere la spiegazione AI: {e}")
         return None
+
+
+
 async def send_question_to_user(context, chat_id):
     question = get_random_question()
 
@@ -204,23 +259,28 @@ async def send_question_to_user(context, chat_id):
 
     random.shuffle(answers)
 
-    context.bot_data['answer_mapping'] = {str(idx): original_idx for idx, (_, original_idx) in enumerate(answers)}
+    # Memorizza i dati specifici della domanda in user_data
+    # Assicurati che user_data esista per questo chat_id
+    if chat_id not in context.user_data:
+        context.user_data[chat_id] = {}
 
-    message = f"Domanda:\n{question['Domanda']}\n\nRisposte:\n"
+    context.user_data[chat_id]['answer_mapping'] = {str(idx): original_idx for idx, (_, original_idx) in enumerate(answers)}
+    context.user_data[chat_id]['correct_answer'] = question['RispostaCorretta']
+    context.user_data[chat_id]['current_question'] = question
+
+    message_text = f"Domanda:\n{question['Domanda']}\n\nRisposte:\n"
     for i, (answer_text, _) in enumerate(answers):
-        message += f"{chr(65+i)}) {answer_text}\n"  # A), B), C), D)
-    message += "\nSeleziona la tua risposta:"
+        message_text += f"{chr(65+i)}) {answer_text}\n"
+    message_text += "\nSeleziona la tua risposta:"
 
-    context.bot_data['correct_answer'] = question['RispostaCorretta']
-    context.bot_data['current_question'] = question  # Salva la domanda corrente
-
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text=message,
-        reply_markup=get_keyboard()
-    )
-
-async def start(update, context):
+    try:
+        await context.bot.send_message(
+            chat_id=chat_id,
+            text=message_text,
+            reply_markup=get_keyboard()
+        )
+    except Exception as e:
+        print(f"Errore nell'invio della domanda all'utente {chat_id}: {e}")async def start(update, context):
     user = update.effective_user
     user_info = {
         "id": user.id,
@@ -308,35 +368,50 @@ async def get_stats(update, context):
 
 async def button_callback(update: Update, context):
     query = update.callback_query
-    await query.answer()
+    await query.answer() # È buona pratica rispondere subito al callback
+
+    user_id = query.from_user.id
+
+    # Recupera i dati specifici della domanda da user_data
+    if user_id not in context.user_data or \
+       'answer_mapping' not in context.user_data[user_id] or \
+       'correct_answer' not in context.user_data[user_id] or \
+       'current_question' not in context.user_data[user_id]:
+        await query.edit_message_text(text="Si è verificato un errore o la domanda è scaduta. Prova con /domanda.")
+        return
+
+    user_question_data = context.user_data[user_id]
+    answer_mapping = user_question_data['answer_mapping']
+    correct_answer_key = user_question_data['correct_answer'] # Es. "Risposta1"
+    current_question = user_question_data['current_question']
 
     if query.data.startswith('ans_'):
-        selected_idx = query.data[4]  # Ottiene l'indice selezionato (0,1,2,3)
-        # Usa la mappatura per ottenere l'indice originale
-        original_idx = context.bot_data['answer_mapping'][selected_idx]
-        selected_answer = f"Risposta{original_idx}"
-        correct_answer = context.bot_data.get('correct_answer')
-        current_question = context.bot_data.get('current_question')
+        selected_idx_str = query.data[4:]  # Ottiene l'indice selezionato come stringa ('0', '1', '2', '3')
 
-        is_correct = selected_answer == correct_answer
+        if selected_idx_str not in answer_mapping:
+            await query.edit_message_text(text="Risposta non valida. Prova con /domanda.")
+            return
+
+        original_idx = answer_mapping[selected_idx_str] # Indice originale della risposta (0,1,2,3)
+        selected_answer_key = f"Risposta{original_idx}" # Es. "Risposta2"
+
+        is_correct = (selected_answer_key == correct_answer_key)
         result_message = "Corretto! 🎉" if is_correct else "Sbagliato! 😕"
 
-        # Aggiorna le statistiche
-        update_user_stats(query.from_user.id, is_correct)
+        update_user_stats(user_id, is_correct)
 
-        # Se AI_API è configurato, ottieni e aggiungi la spiegazione
         if AI_API and current_question:
             explanation = await get_ai_explanation(
                 current_question,
-                correct_answer,
-                context.bot_data['answer_mapping']  # Passa la mappatura delle risposte
+                correct_answer_key, # Passa la chiave della risposta corretta
+                answer_mapping
             )
             if explanation:
                 result_message += f"\n\nSpiegazione:\n{explanation}"
-
-        await query.message.reply_text(result_message)
-
-def main():
+        
+        # Modifica il messaggio originale invece di inviarne uno nuovo
+        # Rimuove anche la tastiera
+        await query.edit_message_text(text=f"{query.message.text}\n\nLa tua risposta: {chr(65+int(selected_idx_str))}\n{result_message}", reply_markup=None)def main():
     # Inizializza Gemini se l'API key è disponibile
     has_ai = setup_gemini()
     if has_ai:
