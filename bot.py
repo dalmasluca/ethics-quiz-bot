@@ -280,7 +280,10 @@ async def send_question_to_user(context, chat_id):
             reply_markup=get_keyboard()
         )
     except Exception as e:
-        print(f"Errore nell'invio della domanda all'utente {chat_id}: {e}")async def start(update, context):
+        print(f"Errore nell'invio della domanda all'utente {chat_id}: {e}")
+
+
+async def start(update, context):
     user = update.effective_user
     user_info = {
         "id": user.id,
