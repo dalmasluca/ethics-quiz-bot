@@ -57,18 +57,16 @@ def load_users():
 def load_stats():
     try:
         with open('stats.json', 'r') as file:
-            # Per gestire il caso di file completamente vuoto prima che json.load dia errore
             content = file.read()
-            if not content.strip(): # Se il file è vuoto o contiene solo spazi bianchi
+            if not content.strip():
                 return {}
-            # Se c'è contenuto, torna all'inizio del file e carica
             file.seek(0)
             return json.load(file)
     except FileNotFoundError:
         return {}
     except json.JSONDecodeError:
         print("Attenzione: Il file 'stats.json' è vuoto o contiene JSON non valido. Verrà trattato come vuoto.")
-        return {} # Tratta il file corrotto/vuoto come se fosse un nuovo file
+        return {}
 
 # Funzione per salvare le statistiche
 def save_stats(stats):
@@ -95,7 +93,7 @@ def update_user_stats(user_id, is_correct):
 
 async def get_ai_explanation(question, correct_answer_key, answer_mapping): # correct_answer_key è tipo "Risposta1"
     try:
-        model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17-thinking')
+        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
 
         shuffled_answers_display = [] # Lista di tuple (lettera, testo_risposta)
         # Ricostruisci l'ordine delle risposte come visualizzato dall'utente
