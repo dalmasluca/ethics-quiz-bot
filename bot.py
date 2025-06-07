@@ -95,7 +95,7 @@ def update_user_stats(user_id, is_correct):
 
 async def get_ai_explanation(question, correct_answer_key, answer_mapping): # correct_answer_key è tipo "Risposta1"
     try:
-        model = genai.GenerativeModel('gemini-pro')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-04-17-thinking')
 
         shuffled_answers_display = [] # Lista di tuple (lettera, testo_risposta)
         # Ricostruisci l'ordine delle risposte come visualizzato dall'utente
