@@ -158,7 +158,7 @@ def get_keyboard():
 
 async def get_ai_explanation(question, correct_answer, answer_mapping):
     try:
-        model = genai.GenerativeModel('gemini-2.5-pro-preview-06-05')
+        model = genai.GenerativeModel('gemini-2.5-flash-preview-05-20')
 
         # Crea la lista delle risposte nell'ordine mostrato all'utente
         shuffled_answers = []
