@@ -43,17 +43,32 @@ def setup_gemini():
 def load_users():
     try:
         with open('users.json', 'r') as file:
+            content = file.read()
+            if not content.strip():
+                return {"users": []}
+            file.seek(0)
             return json.load(file)
     except FileNotFoundError:
         return {"users": []}
+    except json.JSONDecodeError:
+        print("Attenzione: Il file 'users.json' è vuoto o contiene JSON non valido. Verrà trattato come nuovo.")
+        return {"users": []}# Funzione per caricare le statistiche
 
-# Funzione per caricare le statistiche
 def load_stats():
     try:
         with open('stats.json', 'r') as file:
+            # Per gestire il caso di file completamente vuoto prima che json.load dia errore
+            content = file.read()
+            if not content.strip(): # Se il file è vuoto o contiene solo spazi bianchi
+                return {}
+            # Se c'è contenuto, torna all'inizio del file e carica
+            file.seek(0)
             return json.load(file)
     except FileNotFoundError:
         return {}
+    except json.JSONDecodeError:
+        print("Attenzione: Il file 'stats.json' è vuoto o contiene JSON non valido. Verrà trattato come vuoto.")
+        return {} # Tratta il file corrotto/vuoto come se fosse un nuovo file
 
 # Funzione per salvare le statistiche
 def save_stats(stats):
