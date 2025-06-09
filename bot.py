@@ -412,8 +412,9 @@ def main():
             times.append(time(hour, minute))
 
     for t in times:
-        job_queue.run_daily(send_reminder, time=t, days=(0, 1, 2, 3, 4, 5, 6), tzinfo=italy_tz)
         job_queue.run_daily(send_reminder, time=t, days=(0, 1, 2, 3, 4, 5, 6))
+
+    job_queue.run_daily(send_reminder, time=t, days=(0, 1, 2, 3, 4, 5, 6))
 
     # Aggiungi il job per l'invio delle statistiche giornaliere alle 21:00
     job_queue.run_daily(send_daily_stats, time=time(21, 0), days=(0, 1, 2, 3, 4, 5, 6))
