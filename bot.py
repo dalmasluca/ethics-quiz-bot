@@ -222,6 +222,11 @@ async def send_question_to_user(context, chat_id):
 
     random.shuffle(answers)
 
+    # DOPO (corretto)
+    # Inizializza user_data se è None
+    if context.user_data is None:
+        context.user_data = {}
+
     # Memorizza i dati specifici della domanda in user_data
     # Assicurati che user_data esista per questo chat_id
     if chat_id not in context.user_data:
