@@ -406,8 +406,8 @@ def main():
 
     # Crea un array di orari per ogni 15 minuti tra le 9 e le 18
     times = []
-    for hour in range(9, 22):
-        for minute in [0]:
+    for hour in range(8, 23): # Itererà per le ore 9, 10, ..., 21
+        for minute in [0, 10, 20, 30, 40, 50]:
             times.append(time(hour, minute))
 
     # Programma i messaggi per ogni orario specificato
