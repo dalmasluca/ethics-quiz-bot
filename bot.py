@@ -304,7 +304,7 @@ async def send_reminder(context):
     italy_tz = pytz.timezone('Europe/Rome')
     current_hour = datetime.now(italy_tz).hour
 
-    if 9 <= current_hour < 23:
+    if 8 <= current_hour < 23:
         users = load_users()
         for user in users['users']:
             if user.get('reminders_enabled', True):
@@ -404,14 +404,15 @@ def main():
     # Imposta il job per l'invio periodico delle domande
     job_queue = application.job_queue
 
+    italy_tz = pytz.timezone('Europe/Rome')
     # Crea un array di orari per ogni 15 minuti tra le 9 e le 18
     times = []
     for hour in range(8, 23): # Itererà per le ore 9, 10, ..., 21
         for minute in [0, 10, 20, 30, 40, 50]:
             times.append(time(hour, minute))
 
-    # Programma i messaggi per ogni orario specificato
     for t in times:
+        job_queue.run_daily(send_reminder, time=t, days=(0, 1, 2, 3, 4, 5, 6), tzinfo=italy_tz)
         job_queue.run_daily(send_reminder, time=t, days=(0, 1, 2, 3, 4, 5, 6))
 
     # Aggiungi il job per l'invio delle statistiche giornaliere alle 21:00
